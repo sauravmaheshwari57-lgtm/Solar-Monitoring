@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plant Details — {{ app_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1><a href="/" style="text-decoration:none; color:inherit;">&#9728; {{ app_name }}</a></h1>
+  <div class="right">
+    <span id="whoami" style="color:var(--text-muted); font-size:13px;"></span>
+    <a href="/admin" class="btn" id="adminLink" style="display:none;">Admin</a>
+    <a href="/profile" class="btn">Profile</a>
+    <a href="/dashboard" class="btn">Back to Dashboard</a>
+    <button class="btn" id="logoutBtn">Log out</button>
+  </div>
+</header>
+
+<main class="page" style="max-width:720px;">
+  <div class="form-error" id="formError"></div>
+  <div class="form-error" id="formSuccess" style="background:rgba(10,163,10,0.12); color:var(--status-good);"></div>
+
+  <div class="section-title">Basic Details</div>
+  <div class="card">
+    <div class="field"><label for="meter_number">Meter Number (Unique)</label><input type="text" id="meter_number"></div>
+    <div class="field"><label for="meter_serial_number">Meter Serial Number</label><input type="text" id="meter_serial_number"></div>
+    <div class="field"><label for="consumer_number">Consumer Number / Service Number</label><input type="text" id="consumer_number"></div>
+    <div class="field"><label for="customer_name">Customer Name</label><input type="text" id="customer_name"></div>
+    <div class="field"><label for="mobile_number">Mobile Number</label><input type="text" id="mobile_number"></div>
+    <div class="field"><label for="email">Email</label><input type="email" id="email"></div>
+    <div class="field"><label for="address">Address</label><input type="text" id="address"></div>
+  </div>
+
+  <div class="section-title">Solar Plant Details</div>
+  <div class="card">
+    <div class="field"><label for="plant_name">Plant Name</label><input type="text" id="plant_name"></div>
+    <div class="field"><label for="plant_capacity_kw">Plant Capacity (kW)</label><input type="number" step="0.1" id="plant_capacity_kw"></div>
+    <div class="field"><label for="panel_count">Solar Panel Count</label><input type="number" id="panel_count"></div>
+    <div class="field"><label for="inverter_name">Inverter Name</label><input type="text" id="inverter_name"></div>
+    <div class="field"><label for="inverter_serial_number">Inverter Serial Number</label><input type="text" id="inverter_serial_number"></div>
+    <div class="field"><label for="inverter_capacity">Inverter Capacity</label><input type="text" id="inverter_capacity"></div>
+    <div class="field"><label for="installation_date">Installation Date</label><input type="date" id="installation_date"></div>
+  </div>
+
+  <div class="section-title">Meter Details</div>
+  <div class="card">
+    <div class="field"><label for="meter_manufacturer">Meter Manufacturer</label><input type="text" id="meter_manufacturer"></div>
+    <div class="field"><label for="meter_model">Meter Model</label><input type="text" id="meter_model"></div>
+    <div class="field">
+      <label for="phase">Phase</label>
+      <select id="phase" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary); font-size:14px;">
+        <option value="">--</option>
+        <option value="single">Single</option>
+        <option value="three">Three</option>
+      </select>
+    </div>
+    <div class="field"><label for="voltage">Voltage</label><input type="text" id="voltage"></div>
+    <div class="field"><label for="current_rating">Current Rating</label><input type="text" id="current_rating"></div>
+    <div class="field"><label for="ct_pt_ratio">CT/PT Ratio (if any)</label><input type="text" id="ct_pt_ratio"></div>
+  </div>
+
+  <div class="section-title">Location</div>
+  <div class="card">
+    <div class="field"><label for="state">State</label><input type="text" id="state"></div>
+    <div class="field"><label for="city">City</label><input type="text" id="city"></div>
+    <div class="field"><label for="latitude">Latitude</label><input type="number" step="0.000001" id="latitude"></div>
+    <div class="field"><label for="longitude">Longitude</label><input type="number" step="0.000001" id="longitude"></div>
+  </div>
+
+  <div class="section-title">Monitoring</div>
+  <div class="card">
+    <div class="field">
+      <label for="connectivity_type">Connectivity</label>
+      <select id="connectivity_type" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary); font-size:14px;">
+        <option value="">--</option>
+        <option value="wifi">Wi-Fi</option>
+        <option value="ethernet">Ethernet</option>
+        <option value="4g">4G</option>
+      </select>
+    </div>
+    <div class="field"><label for="data_logger_id">Data Logger ID</label><input type="text" id="data_logger_id"></div>
+    <div class="field"><label for="gateway_id">Gateway ID</label><input type="text" id="gateway_id"></div>
+    <div class="field"><label for="modbus_address">Modbus Address</label><input type="text" id="modbus_address"></div>
+    <div class="field"><label for="modbus_slave_id">Modbus Slave ID</label><input type="text" id="modbus_slave_id"></div>
+
+    <button class="btn btn-primary" id="saveBtn" style="width:100%; margin-top:8px;">Save Plant Details</button>
+  </div>
+</main>
+
+<script>
+const token = localStorage.getItem("access_token");
+if (!token) window.location.href = "/login";
+
+async function authFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+    throw new Error("Not authenticated");
+  }
+  return res;
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  try { await authFetch("/api/auth/logout", { method: "POST" }); } catch (e) {}
+  localStorage.removeItem("access_token");
+  window.location.href = "/";
+});
+
+const FIELDS = [
+  "meter_number", "meter_serial_number", "consumer_number", "customer_name", "mobile_number", "email", "address",
+  "plant_name", "plant_capacity_kw", "panel_count", "inverter_name", "inverter_serial_number", "inverter_capacity", "installation_date",
+  "meter_manufacturer", "meter_model", "phase", "voltage", "current_rating", "ct_pt_ratio",
+  "state", "city", "latitude", "longitude",
+  "connectivity_type", "data_logger_id", "gateway_id", "modbus_address", "modbus_slave_id",
+];
+
+async function load() {
+  const me = await authFetch("/api/auth/me").then(r => r.json());
+  document.getElementById("whoami").textContent = me.username + (me.is_admin ? " (admin)" : "");
+  if (me.is_admin) document.getElementById("adminLink").style.display = "";
+
+  const data = await authFetch("/api/plant-profile").then(r => r.json());
+  FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    if (!el || data[f] === null || data[f] === undefined) return;
+    if (f === "installation_date") {
+      el.value = data[f].split("T")[0];
+    } else {
+      el.value = data[f];
+    }
+  });
+}
+
+document.getElementById("saveBtn").addEventListener("click", async () => {
+  const errorBox = document.getElementById("formError");
+  const successBox = document.getElementById("formSuccess");
+  errorBox.classList.remove("show");
+  successBox.classList.remove("show");
+
+  const payload = {};
+  FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    let v = el.value;
+    if (v === "") { payload[f] = null; return; }
+    if (f === "installation_date") { payload[f] = new Date(v).toISOString(); return; }
+    if (["plant_capacity_kw", "latitude", "longitude"].includes(f)) { payload[f] = parseFloat(v); return; }
+    if (f === "panel_count") { payload[f] = parseInt(v, 10); return; }
+    payload[f] = v;
+  });
+
+  try {
+    const res = await authFetch("/api/plant-profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Could not save plant details");
+    successBox.textContent = "Saved successfully.";
+    successBox.classList.add("show");
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+load();
+</script>
+</body>
+</html>

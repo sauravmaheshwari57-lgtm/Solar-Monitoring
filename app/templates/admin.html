@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin — {{ app_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+<header class="topbar">
+  <h1><a href="/" style="text-decoration:none; color:inherit;">&#128737; Admin — {{ app_name }}</a></h1>
+  <div class="right">
+    <span id="whoami" style="color:var(--text-muted); font-size:13px;"></span>
+    <a href="/dashboard" class="btn">Back to Dashboard</a>
+    <a href="/profile" class="btn">Profile</a>
+    <a href="/plant-details" class="btn">Plant Details</a>
+    <button class="btn" id="logoutBtn">Log out</button>
+  </div>
+</header>
+
+<main class="page">
+  <div class="section-title">System Overview</div>
+  <div class="tiles" id="overviewTiles"></div>
+
+  <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>Solar Plants</span>
+    <button class="btn" style="padding:5px 12px; font-size:13px;" id="addPlantBtn">+ Add Plant</button>
+  </div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Name</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Code</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Capacity</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Location</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Status</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;"></th>
+        </tr>
+      </thead>
+      <tbody id="plantsTable"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Users</div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Username</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Role</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Joined</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;"></th>
+        </tr>
+      </thead>
+      <tbody id="usersTable"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Most Visited Pages (last 7 days)</div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Page</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Visits</th>
+        </tr>
+      </thead>
+      <tbody id="topPagesTable"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Devices — Default Plant</div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Device</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Type</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Status</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="devicesTable"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Recent Activity</div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">User</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Event</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">When</th>
+        </tr>
+      </thead>
+      <tbody id="activityTable"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>Energy Reports</span>
+    <select id="reportPeriod" style="background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:13px;">
+      <option value="daily">Daily (24h)</option>
+      <option value="weekly" selected>Weekly (7d)</option>
+      <option value="monthly">Monthly (30d)</option>
+      <option value="yearly">Yearly (12mo)</option>
+    </select>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <canvas id="reportBarChart" height="90"></canvas>
+  </div>
+  <div class="card">
+    <canvas id="reportPieChart" height="140"></canvas>
+  </div>
+
+  <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>Maintenance — Default Plant</span>
+    <button class="btn" style="padding:5px 12px; font-size:13px;" id="addMaintenanceBtn">+ Add Record</button>
+  </div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Service Date</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Next Service</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Engineer</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;">Notes</th>
+          <th style="padding:12px 16px; color:var(--text-muted); font-weight:500;"></th>
+        </tr>
+      </thead>
+      <tbody id="maintenanceTable"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Logs</div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="legend" style="margin-bottom:10px;">
+      <button class="btn" style="padding:5px 12px; font-size:13px;" data-log-tab="login">Login History</button>
+      <button class="btn" style="padding:5px 12px; font-size:13px;" data-log-tab="activity">User Activity</button>
+      <button class="btn" style="padding:5px 12px; font-size:13px;" data-log-tab="errors">Error Logs</button>
+    </div>
+    <div id="logsContent" style="max-height:320px; overflow-y:auto; font-size:13px;"></div>
+  </div>
+
+  <div class="section-title">Site Settings</div>
+  <div class="card">
+    <div class="form-error" id="siteSettingsError"></div>
+    <div class="field">
+      <label for="companyName">Company Name</label>
+      <input type="text" id="companyName">
+    </div>
+    <div class="field">
+      <label for="logoUrl">Logo URL</label>
+      <input type="text" id="logoUrl" placeholder="https://...">
+    </div>
+    <div class="field">
+      <label for="siteTheme">Theme</label>
+      <select id="siteTheme" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--page); color:var(--text-primary); font-size:14px;">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="siteLanguage">Language</label>
+      <input type="text" id="siteLanguage">
+    </div>
+    <div class="field">
+      <label for="siteTimezone">Time Zone</label>
+      <input type="text" id="siteTimezone">
+    </div>
+    <button class="btn btn-primary" id="siteSettingsSave">Save Site Settings</button>
+  </div>
+
+  <div class="section-title">Backup &amp; Restore</div>
+  <div class="card">
+    <div class="disclaimer-note">Restore <strong>overwrites</strong> current data with the uploaded backup. This cannot be undone — download a fresh backup first if unsure.</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <a href="#" class="btn btn-primary" id="downloadBackupBtn">Download Backup (.sql)</a>
+      <input type="file" id="restoreFile" accept=".sql" style="font-size:13px;">
+      <button class="btn" id="restoreBtn">Restore from File</button>
+    </div>
+    <div class="form-error" id="backupError" style="margin-top:12px;"></div>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="plantModal">
+  <div class="modal">
+    <h2>Add Solar Plant</h2>
+    <div class="form-error" id="plantError"></div>
+    <div class="field">
+      <label for="plantName">Plant Name</label>
+      <input type="text" id="plantName">
+    </div>
+    <div class="field">
+      <label for="plantCode">Plant Code (unique)</label>
+      <input type="text" id="plantCode">
+    </div>
+    <div class="field">
+      <label for="plantCapacity">Capacity (kW)</label>
+      <input type="number" step="0.1" id="plantCapacity">
+    </div>
+    <div class="field">
+      <label for="plantLocation">Location</label>
+      <input type="text" id="plantLocation">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="plantCancel">Cancel</button>
+      <button class="btn btn-primary" id="plantSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="maintenanceModal">
+  <div class="modal">
+    <h2>Add Maintenance Record</h2>
+    <div class="form-error" id="maintenanceError"></div>
+    <div class="field">
+      <label for="serviceDate">Service Date</label>
+      <input type="date" id="serviceDate">
+    </div>
+    <div class="field">
+      <label for="nextServiceDate">Next Service Date (optional)</label>
+      <input type="date" id="nextServiceDate">
+    </div>
+    <div class="field">
+      <label for="engineerName">Engineer Name</label>
+      <input type="text" id="engineerName">
+    </div>
+    <div class="field">
+      <label for="maintenanceNotes">Notes</label>
+      <input type="text" id="maintenanceNotes">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="maintenanceCancel">Cancel</button>
+      <button class="btn btn-primary" id="maintenanceSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("access_token");
+if (!token) window.location.href = "/login";
+
+async function authFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+    throw new Error("Not authenticated");
+  }
+  return res;
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  try { await authFetch("/api/auth/logout", { method: "POST" }); } catch (e) {}
+  localStorage.removeItem("access_token");
+  window.location.href = "/";
+});
+
+let currentUserId = null;
+
+function renderOverview(o) {
+  const latest = o.latest_reading;
+  const tiles = [
+    { label: "Total Solar Plants", value: o.total_plants },
+    { label: "Total Users", value: o.total_users },
+    { label: "Total Energy Generated", value: o.total_energy_generated_kwh + " kWh" },
+    { label: "Today's Energy", value: o.today_energy_kwh + " kWh" },
+    { label: "Total Savings (Month)", value: "₹" + o.total_savings_this_month },
+    { label: "Unresolved Alerts", value: o.unresolved_alerts },
+    { label: "Online Devices", value: o.online_devices, cls: "status-ok" },
+    { label: "Offline Devices", value: o.offline_devices, cls: o.offline_devices > 0 ? "status-fault" : "" },
+    { label: "Signups Today", value: o.signups_today },
+    { label: "Logins Today", value: o.logins_today },
+    { label: "Visits Today", value: o.visits_today },
+    { label: "Latest Inverter", value: latest ? latest.inverter_status.toUpperCase() : "--",
+      cls: latest && latest.inverter_status === "fault" ? "status-fault" : "status-ok" },
+  ];
+  document.getElementById("overviewTiles").innerHTML = tiles.map(t => `
+    <div class="tile">
+      <div class="label">${t.label}</div>
+      <div class="value ${t.cls || ""}">${t.value}</div>
+    </div>`).join("");
+}
+
+function renderActivity(a) {
+  document.getElementById("topPagesTable").innerHTML = a.top_pages.map(p => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:12px 16px;">${p.path}</td>
+      <td style="padding:12px 16px;">${p.count}</td>
+    </tr>`).join("") || '<tr><td style="padding:12px 16px;" class="empty">No visits yet.</td></tr>';
+
+  const icons = { register: "🆕", login: "→", logout: "←" };
+  document.getElementById("activityTable").innerHTML = a.recent_events.map(e => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:12px 16px;">${e.username}</td>
+      <td style="padding:12px 16px;">${icons[e.event_type] || ""} ${e.event_type}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${new Date(e.timestamp).toLocaleString()}</td>
+    </tr>`).join("") || '<tr><td style="padding:12px 16px;" class="empty">No activity yet.</td></tr>';
+}
+
+function renderPlants(plants) {
+  document.getElementById("plantsTable").innerHTML = plants.map(p => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:12px 16px;">${p.name}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${p.plant_code}</td>
+      <td style="padding:12px 16px;">${p.capacity_kw} kW</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${p.location || "--"}</td>
+      <td style="padding:12px 16px;">${p.status}</td>
+      <td style="padding:12px 16px; text-align:right;">
+        ${p.plant_code === "DEFAULT"
+          ? '<span style="color:var(--text-muted); font-size:13px;">Default</span>'
+          : `<button class="btn" style="padding:5px 12px; font-size:13px;" data-delete-plant="${p.id}">Delete</button>`}
+      </td>
+    </tr>`).join("") || '<tr><td style="padding:12px 16px;" class="empty">No plants yet.</td></tr>';
+
+  document.querySelectorAll("[data-delete-plant]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this plant?")) return;
+      const res = await authFetch(`/api/admin/plants/${btn.dataset.deletePlant}`, { method: "DELETE" });
+      if (res.ok) load();
+      else alert("Could not delete plant.");
+    });
+  });
+}
+
+function renderDevices(devices) {
+  document.getElementById("devicesTable").innerHTML = devices.map(d => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:12px 16px;">${d.device_code}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${d.device_type}</td>
+      <td style="padding:12px 16px;" class="${d.status === 'online' ? 'status-ok' : 'status-fault'}">${d.status.toUpperCase()}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${d.last_seen ? new Date(d.last_seen).toLocaleString() : "--"}</td>
+    </tr>`).join("") || '<tr><td style="padding:12px 16px;" class="empty">No devices yet.</td></tr>';
+}
+
+const plantModal = document.getElementById("plantModal");
+document.getElementById("addPlantBtn").addEventListener("click", () => {
+  document.getElementById("plantError").classList.remove("show");
+  document.getElementById("plantName").value = "";
+  document.getElementById("plantCode").value = "";
+  document.getElementById("plantCapacity").value = "";
+  document.getElementById("plantLocation").value = "";
+  plantModal.classList.add("show");
+});
+document.getElementById("plantCancel").addEventListener("click", () => plantModal.classList.remove("show"));
+document.getElementById("plantSave").addEventListener("click", async () => {
+  const errorBox = document.getElementById("plantError");
+  errorBox.classList.remove("show");
+  const payload = {
+    name: document.getElementById("plantName").value,
+    plant_code: document.getElementById("plantCode").value,
+    capacity_kw: parseFloat(document.getElementById("plantCapacity").value),
+    location: document.getElementById("plantLocation").value,
+  };
+  try {
+    const res = await authFetch("/api/admin/plants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Could not create plant");
+    }
+    plantModal.classList.remove("show");
+    load();
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+function renderUsers(users) {
+  document.getElementById("usersTable").innerHTML = users.map(u => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:12px 16px;">${u.username}</td>
+      <td style="padding:12px 16px;">${u.is_admin ? "Admin" : "User"}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td style="padding:12px 16px; text-align:right;">
+        ${u.id === currentUserId
+          ? '<span style="color:var(--text-muted); font-size:13px;">You</span>'
+          : `<button class="btn" style="padding:5px 12px; font-size:13px;" data-delete="${u.id}">Delete</button>`}
+      </td>
+    </tr>`).join("");
+
+  document.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this user?")) return;
+      const res = await authFetch(`/api/admin/users/${btn.dataset.delete}`, { method: "DELETE" });
+      if (res.ok) load();
+      else alert("Could not delete user.");
+    });
+  });
+}
+
+/* ---------- Reports ---------- */
+
+let barChart, pieChart;
+
+async function loadReport(period) {
+  const data = await authFetch(`/api/admin/reports?period=${period}`).then(r => r.json());
+  const style = getComputedStyle(document.documentElement);
+  const cGen = style.getPropertyValue("--series-generated").trim();
+  const cCon = style.getPropertyValue("--series-consumed").trim();
+  const cExp = style.getPropertyValue("--series-export").trim();
+  const cBat = style.getPropertyValue("--series-battery").trim();
+  const gridline = style.getPropertyValue("--gridline").trim();
+  const textSecondary = style.getPropertyValue("--text-secondary").trim();
+
+  const labels = data.buckets.map(b => b.label);
+  const barCtx = document.getElementById("reportBarChart").getContext("2d");
+  const barData = {
+    labels,
+    datasets: [
+      { label: "Generated", data: data.buckets.map(b => b.generated), backgroundColor: cGen },
+      { label: "Consumed", data: data.buckets.map(b => b.consumed), backgroundColor: cCon },
+    ],
+  };
+  if (barChart) { barChart.data = barData; barChart.update(); }
+  else {
+    barChart = new Chart(barCtx, {
+      type: "bar",
+      data: barData,
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridline }, ticks: { color: textSecondary } },
+          x: { grid: { display: false }, ticks: { color: textSecondary } },
+        },
+        plugins: { legend: { labels: { color: textSecondary } } },
+      },
+    });
+  }
+
+  const pieCtx = document.getElementById("reportPieChart").getContext("2d");
+  const pieData = {
+    labels: ["Used at home", "Sent to grid", "Charged to battery"],
+    datasets: [{
+      data: [data.flow_split.used_at_home, data.flow_split.sent_to_grid, data.flow_split.charged_to_battery],
+      backgroundColor: [cGen, cExp, cBat],
+    }],
+  };
+  if (pieChart) { pieChart.data = pieData; pieChart.update(); }
+  else {
+    pieChart = new Chart(pieCtx, {
+      type: "pie",
+      data: pieData,
+      options: { plugins: { legend: { labels: { color: textSecondary } } } },
+    });
+  }
+}
+
+document.getElementById("reportPeriod").addEventListener("change", (e) => loadReport(e.target.value));
+
+/* ---------- Maintenance ---------- */
+
+async function loadMaintenance() {
+  const rows = await authFetch("/api/admin/plants/1/maintenance").then(r => r.json());
+  document.getElementById("maintenanceTable").innerHTML = rows.map(m => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:12px 16px;">${new Date(m.service_date).toLocaleDateString()}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${m.next_service_date ? new Date(m.next_service_date).toLocaleDateString() : "--"}</td>
+      <td style="padding:12px 16px;">${m.engineer_name || "--"}</td>
+      <td style="padding:12px 16px; color:var(--text-muted);">${m.notes || "--"}</td>
+      <td style="padding:12px 16px; text-align:right;"><button class="btn" style="padding:5px 12px; font-size:13px;" data-delete-maintenance="${m.id}">Delete</button></td>
+    </tr>`).join("") || '<tr><td style="padding:12px 16px;" class="empty">No maintenance records yet.</td></tr>';
+
+  document.querySelectorAll("[data-delete-maintenance]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this record?")) return;
+      await authFetch(`/api/admin/maintenance/${btn.dataset.deleteMaintenance}`, { method: "DELETE" });
+      loadMaintenance();
+    });
+  });
+}
+
+const maintenanceModal = document.getElementById("maintenanceModal");
+document.getElementById("addMaintenanceBtn").addEventListener("click", () => {
+  document.getElementById("maintenanceError").classList.remove("show");
+  document.getElementById("serviceDate").value = "";
+  document.getElementById("nextServiceDate").value = "";
+  document.getElementById("engineerName").value = "";
+  document.getElementById("maintenanceNotes").value = "";
+  maintenanceModal.classList.add("show");
+});
+document.getElementById("maintenanceCancel").addEventListener("click", () => maintenanceModal.classList.remove("show"));
+document.getElementById("maintenanceSave").addEventListener("click", async () => {
+  const errorBox = document.getElementById("maintenanceError");
+  errorBox.classList.remove("show");
+  const serviceDate = document.getElementById("serviceDate").value;
+  if (!serviceDate) { errorBox.textContent = "Service date is required"; errorBox.classList.add("show"); return; }
+  const payload = {
+    service_date: new Date(serviceDate).toISOString(),
+    next_service_date: document.getElementById("nextServiceDate").value ? new Date(document.getElementById("nextServiceDate").value).toISOString() : null,
+    engineer_name: document.getElementById("engineerName").value || null,
+    notes: document.getElementById("maintenanceNotes").value || null,
+  };
+  try {
+    const res = await authFetch("/api/admin/plants/1/maintenance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Could not save record");
+    maintenanceModal.classList.remove("show");
+    loadMaintenance();
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+/* ---------- Logs ---------- */
+
+async function loadLogs(tab) {
+  const box = document.getElementById("logsContent");
+  box.innerHTML = '<div class="empty">Loading...</div>';
+  if (tab === "login") {
+    const rows = await authFetch("/api/admin/logs/login").then(r => r.json());
+    box.innerHTML = rows.map(r => `<div style="padding:8px 0; border-bottom:1px solid var(--border);">${r.username} — ${r.event_type} <span style="color:var(--text-muted);">(${new Date(r.timestamp).toLocaleString()})</span></div>`).join("") || '<div class="empty">No login history.</div>';
+  } else if (tab === "activity") {
+    const rows = await authFetch("/api/admin/logs/activity").then(r => r.json());
+    box.innerHTML = rows.map(r => `<div style="padding:8px 0; border-bottom:1px solid var(--border);">${r.path} <span style="color:var(--text-muted);">(${new Date(r.timestamp).toLocaleString()})</span></div>`).join("") || '<div class="empty">No activity logged.</div>';
+  } else {
+    const rows = await authFetch("/api/admin/logs/errors").then(r => r.json());
+    box.innerHTML = rows.map(r => `<div style="padding:8px 0; border-bottom:1px solid var(--border);"><strong>${r.path || ""}</strong><br><span style="color:var(--status-critical);">${r.message}</span><br><span style="color:var(--text-muted);">${new Date(r.timestamp).toLocaleString()}</span></div>`).join("") || '<div class="empty">No errors logged. 🎉</div>';
+  }
+}
+
+document.querySelectorAll("[data-log-tab]").forEach(btn => {
+  btn.addEventListener("click", () => loadLogs(btn.dataset.logTab));
+});
+
+/* ---------- Site Settings ---------- */
+
+async function loadSiteSettings() {
+  const s = await authFetch("/api/admin/site-settings").then(r => r.json());
+  document.getElementById("companyName").value = s.company_name || "";
+  document.getElementById("logoUrl").value = s.logo_url || "";
+  document.getElementById("siteTheme").value = s.theme || "dark";
+  document.getElementById("siteLanguage").value = s.language || "";
+  document.getElementById("siteTimezone").value = s.timezone || "";
+}
+
+document.getElementById("siteSettingsSave").addEventListener("click", async () => {
+  const errorBox = document.getElementById("siteSettingsError");
+  errorBox.classList.remove("show");
+  const payload = {
+    company_name: document.getElementById("companyName").value,
+    logo_url: document.getElementById("logoUrl").value,
+    theme: document.getElementById("siteTheme").value,
+    language: document.getElementById("siteLanguage").value,
+    timezone: document.getElementById("siteTimezone").value,
+  };
+  try {
+    const res = await authFetch("/api/admin/site-settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Could not save settings");
+    alert("Site settings saved.");
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+/* ---------- Backup / Restore ---------- */
+
+document.getElementById("downloadBackupBtn").addEventListener("click", async (e) => {
+  e.preventDefault();
+  const res = await authFetch("/api/admin/backup");
+  if (!res.ok) { alert("Backup failed."); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "solar_monitor_backup.sql";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("restoreBtn").addEventListener("click", async () => {
+  const errorBox = document.getElementById("backupError");
+  errorBox.classList.remove("show");
+  const fileInput = document.getElementById("restoreFile");
+  if (!fileInput.files.length) { errorBox.textContent = "Choose a .sql file first"; errorBox.classList.add("show"); return; }
+  if (!confirm("This will OVERWRITE current data with the uploaded backup. Continue?")) return;
+
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  try {
+    const res = await authFetch("/api/admin/backup/restore", { method: "POST", body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Restore failed");
+    }
+    alert("Database restored successfully. Reloading...");
+    location.reload();
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+async function load() {
+  const me = await authFetch("/api/auth/me").then(r => r.json());
+  if (!me.is_admin) {
+    window.location.href = "/dashboard";
+    return;
+  }
+  currentUserId = me.id;
+  document.getElementById("whoami").textContent = me.username + " (admin)";
+
+  const [overview, users, activity, plants, devices] = await Promise.all([
+    authFetch("/api/admin/overview").then(r => r.json()),
+    authFetch("/api/admin/users").then(r => r.json()),
+    authFetch("/api/admin/activity").then(r => r.json()),
+    authFetch("/api/admin/plants").then(r => r.json()),
+    authFetch("/api/admin/plants/1/devices").then(r => r.json()),
+  ]);
+  renderOverview(overview);
+  renderUsers(users);
+  renderActivity(activity);
+  renderPlants(plants);
+  renderDevices(devices);
+
+  loadReport("weekly");
+  loadMaintenance();
+  loadLogs("login");
+  loadSiteSettings();
+}
+
+load();
+</script>
+</body>
+</html>

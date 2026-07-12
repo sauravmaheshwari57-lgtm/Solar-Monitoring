@@ -1,0 +1,50 @@
+{% extends "public_base.html" %}
+
+{% block title %}Portfolio — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+  <h1>Portfolio</h1>
+  <div class="breadcrumb"><a href="/">Home</a> <span class="sep">&#8250;</span> <span>Portfolio</span></div>
+</section>
+
+<section class="page-body">
+  <div class="disclaimer-note">This is a feature portfolio for the software itself — not a list of installed customer projects.</div>
+
+  <div class="page-gallery">
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Topaz_Solar_Farm%2C_California_Valley.jpg?width=700" alt="Utility-scale solar farm" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Three_men_installing_solar_panels_on_a_house.jpg?width=700" alt="Installers mounting solar panels" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+  </div>
+
+  <h2>What's built so far</h2>
+  <p>A snapshot of what's shipped in the current version of the dashboard:</p>
+
+  <div class="portfolio-grid">
+    <div class="portfolio-card">
+      <div class="cap-value">10s</div>
+      <div class="cap-label">Live reading interval</div>
+    </div>
+    <div class="portfolio-card">
+      <div class="cap-value">3</div>
+      <div class="cap-label">Automated alert types</div>
+    </div>
+    <div class="portfolio-card">
+      <div class="cap-value">2</div>
+      <div class="cap-label">Data-source drivers (simulator, Modbus)</div>
+    </div>
+    <div class="portfolio-card">
+      <div class="cap-value">100%</div>
+      <div class="cap-label">Self-hosted, your own database</div>
+    </div>
+  </div>
+
+  <h2>Coming next</h2>
+  <p>Multi-site support, MQTT-based smart meter ingestion, and exportable monthly billing reports are on the roadmap.</p>
+</section>
+{% endblock %}

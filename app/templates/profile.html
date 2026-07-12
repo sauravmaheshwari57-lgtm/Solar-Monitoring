@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile — {{ app_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1><a href="/" style="text-decoration:none; color:inherit;">&#9728; {{ app_name }}</a></h1>
+  <div class="right">
+    <span id="whoami" style="color:var(--text-muted); font-size:13px;"></span>
+    <a href="/admin" class="btn" id="adminLink" style="display:none;">Admin</a>
+    <a href="/plant-details" class="btn">Plant Details</a>
+    <a href="/dashboard" class="btn">Back to Dashboard</a>
+    <button class="btn" id="logoutBtn">Log out</button>
+  </div>
+</header>
+
+<main class="page" style="max-width:560px;">
+  <div class="section-title">Change Password</div>
+  <div class="card">
+    <div class="form-error" id="pwError"></div>
+    <div class="field">
+      <label for="currentPassword">Current Password</label>
+      <input type="password" id="currentPassword">
+    </div>
+    <div class="field">
+      <label for="newPassword">New Password</label>
+      <input type="password" id="newPassword">
+    </div>
+    <button class="btn btn-primary" id="pwSaveBtn">Change Password</button>
+  </div>
+
+  <div class="section-title">Two-Factor Authentication (2FA)</div>
+  <div class="card" id="twoFaCard">
+    <div class="form-error" id="tfaError"></div>
+    <p id="tfaStatus" style="color:var(--text-secondary); font-size:14px; margin-top:0;">Loading...</p>
+
+    <div id="tfaDisabledView" style="display:none;">
+      <button class="btn btn-primary" id="tfaSetupBtn">Enable 2FA</button>
+    </div>
+
+    <div id="tfaSetupView" style="display:none;">
+      <p style="font-size:13px; color:var(--text-secondary);">Scan this QR code with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code below.</p>
+      <img id="tfaQr" style="border-radius:8px; margin:12px 0;">
+      <div class="field">
+        <label for="tfaCode">6-digit code</label>
+        <input type="text" id="tfaCode" maxlength="6">
+      </div>
+      <button class="btn btn-primary" id="tfaVerifyBtn">Verify &amp; Enable</button>
+    </div>
+
+    <div id="tfaEnabledView" style="display:none;">
+      <p style="color:var(--status-good); font-size:14px;">✔ 2FA is enabled on your account.</p>
+      <div class="field">
+        <label for="tfaDisablePassword">Password (to disable)</label>
+        <input type="password" id="tfaDisablePassword">
+      </div>
+      <button class="btn" id="tfaDisableBtn">Disable 2FA</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const token = localStorage.getItem("access_token");
+if (!token) window.location.href = "/login";
+
+async function authFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+    throw new Error("Not authenticated");
+  }
+  return res;
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  try { await authFetch("/api/auth/logout", { method: "POST" }); } catch (e) {}
+  localStorage.removeItem("access_token");
+  window.location.href = "/";
+});
+
+document.getElementById("pwSaveBtn").addEventListener("click", async () => {
+  const errorBox = document.getElementById("pwError");
+  errorBox.classList.remove("show");
+  try {
+    const res = await authFetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        current_password: document.getElementById("currentPassword").value,
+        new_password: document.getElementById("newPassword").value,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Could not change password");
+    }
+    document.getElementById("currentPassword").value = "";
+    document.getElementById("newPassword").value = "";
+    alert("Password changed successfully.");
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+function showTfaView(view) {
+  ["tfaDisabledView", "tfaSetupView", "tfaEnabledView"].forEach(id => {
+    document.getElementById(id).style.display = id === view ? "" : "none";
+  });
+}
+
+async function loadTfaStatus() {
+  const me = await authFetch("/api/auth/me").then(r => r.json());
+  document.getElementById("whoami").textContent = me.username + (me.is_admin ? " (admin)" : "");
+  if (me.is_admin) document.getElementById("adminLink").style.display = "";
+  document.getElementById("tfaStatus").textContent = me.totp_enabled
+    ? "2FA is currently enabled for this account."
+    : "2FA is currently disabled. Enable it for an extra layer of login security.";
+  showTfaView(me.totp_enabled ? "tfaEnabledView" : "tfaDisabledView");
+}
+
+document.getElementById("tfaSetupBtn").addEventListener("click", async () => {
+  const res = await authFetch("/api/auth/2fa/setup", { method: "POST" });
+  const data = await res.json();
+  document.getElementById("tfaQr").src = "data:image/png;base64," + data.qr_code_base64;
+  showTfaView("tfaSetupView");
+});
+
+document.getElementById("tfaVerifyBtn").addEventListener("click", async () => {
+  const errorBox = document.getElementById("tfaError");
+  errorBox.classList.remove("show");
+  try {
+    const res = await authFetch("/api/auth/2fa/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: document.getElementById("tfaCode").value }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Invalid code");
+    }
+    loadTfaStatus();
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+document.getElementById("tfaDisableBtn").addEventListener("click", async () => {
+  const errorBox = document.getElementById("tfaError");
+  errorBox.classList.remove("show");
+  try {
+    const res = await authFetch("/api/auth/2fa/disable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: document.getElementById("tfaDisablePassword").value }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Could not disable 2FA");
+    }
+    document.getElementById("tfaDisablePassword").value = "";
+    loadTfaStatus();
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.classList.add("show");
+  }
+});
+
+loadTfaStatus();
+</script>
+</body>
+</html>

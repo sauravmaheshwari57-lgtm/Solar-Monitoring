@@ -1,0 +1,34 @@
+{% extends "public_base.html" %}
+
+{% block title %}Company — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+  <h1>Company</h1>
+  <div class="breadcrumb"><a href="/">Home</a> <span class="sep">&#8250;</span> <span>Company</span></div>
+</section>
+
+<section class="page-body">
+  <div class="disclaimer-note">This is a personal / demo project, not a registered company. This page describes the project and its goals.</div>
+
+  <div class="page-gallery">
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Three_men_installing_solar_panels_on_a_house.jpg?width=700" alt="Installers mounting solar panels on a house" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Solar_panel_installer.jpg?width=700" alt="Solar panel installer at work" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+  </div>
+
+  <h2>What this is</h2>
+  <p>{{ app_name }} is a self-hosted dashboard for tracking a home solar installation — generation, consumption, grid import/export, battery health, billing, and maintenance alerts, all in one place.</p>
+
+  <h2>Why it exists</h2>
+  <p>Most inverter apps lock your data behind a vendor's cloud. This project takes the opposite approach: your readings live in your own PostgreSQL database, your login is your own, and the data source is swappable — start with a simulator, move to a real inverter over Modbus when you're ready.</p>
+
+  <h2>How it's built</h2>
+  <p>Python backend (FastAPI), PostgreSQL for storage, a background scheduler for live readings, and a server-rendered dashboard with Chart.js for the trend view. No third-party analytics, no vendor lock-in.</p>
+</section>
+{% endblock %}

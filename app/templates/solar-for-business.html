@@ -1,0 +1,31 @@
+{% extends "public_base.html" %}
+
+{% block title %}Solar For Business — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+  <h1>Solar For Business</h1>
+  <div class="breadcrumb"><a href="/">Home</a> <span class="sep">&#8250;</span> <span>Solar For Business</span></div>
+</section>
+
+<section class="page-body">
+  <div class="disclaimer-note">This project currently ships as a single-site dashboard. Multi-site / commercial support below is a direction, not a shipped feature.</div>
+
+  <div class="page-gallery">
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Topaz_Solar_Farm%2C_California_Valley.jpg?width=700" alt="Large-scale ground-mount solar farm" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Solar_project_at_Fort_Hunter_Liggett_130312-A-AN535-022.jpg?width=700" alt="Commercial ground-mounted solar project" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+  </div>
+
+  <h2>The same monitoring, at a larger scale</h2>
+  <p>The underlying model — readings, alerts, billing estimates, a swappable data-source driver — doesn't change for a larger installation. A commercial rooftop or ground-mount system produces the same kinds of numbers, just bigger.</p>
+
+  <h2>What would need to change</h2>
+  <p>Supporting multiple sites under one login, per-site tariff configuration, and role-based access for a facilities team are the natural next steps if this project grows past a single home installation.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ app_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+<header class="topbar">
+  <h1><a href="/" style="text-decoration:none; color:inherit;">&#9728; {{ app_name }}</a></h1>
+  <div class="right">
+    <span class="clock" id="clock"></span>
+    <span id="whoami" style="color:var(--text-muted); font-size:13px;"></span>
+    <a href="/admin" class="btn" id="adminLink" style="display:none;">Admin</a>
+    <a href="/profile" class="btn">Profile</a>
+    <a href="/plant-details" class="btn">Plant Details</a>
+    <button class="btn btn-icon" id="settingsBtn" title="Settings">&#9881;</button>
+    <button class="btn" id="logoutBtn">Log out</button>
+  </div>
+</header>
+
+<main class="page">
+  <div class="tiles" id="tiles"></div>
+
+  <div class="section-title">Battery</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;color:var(--text-secondary)">
+      <span>Charge level</span>
+      <span id="batteryPctLabel">--%</span>
+    </div>
+    <div class="meter-track"><div class="meter-fill" id="batteryMeter" style="width:0%"></div></div>
+  </div>
+
+  <div class="section-title">Where Today's Solar Energy Went</div>
+  <div class="card">
+    <div class="stacked-bar" id="energyFlowBar"></div>
+    <div class="legend" id="energyFlowLegend" style="margin-top:12px"></div>
+  </div>
+
+  <div class="section-title">Live Trends</div>
+  <div class="trend-grid">
+    <div class="card chart-wrap trend-card">
+      <div class="trend-head">
+        <span class="trend-dot" style="background:var(--series-generated)"></span>
+        <span class="trend-label">Generation</span>
+        <span class="trend-live" id="genLiveValue">-- kWh</span>
+      </div>
+      <div class="chart-holder"><canvas id="generatedChart"></canvas></div>
+    </div>
+    <div class="card chart-wrap trend-card">
+      <div class="trend-head">
+        <span class="trend-dot" style="background:var(--chart-consumed-line)"></span>
+        <span class="trend-label">Consumption</span>
+        <span class="trend-live" id="conLiveValue">-- kWh</span>
+      </div>
+      <div class="chart-holder"><canvas id="consumedChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-title">Generation vs Consumption (combined)</div>
+  <div class="card chart-wrap">
+    <canvas id="trendChart" height="90"></canvas>
+  </div>
+
+  <div class="section-title">Alerts</div>
+  <div class="alerts" id="alerts"><div class="empty">Loading...</div></div>
+</main>
+
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal">
+    <h2>Settings</h2>
+    <div class="form-error" id="settingsError"></div>
+    <div class="field">
+      <label for="tariffRate">Grid tariff rate (&#8377;/kWh)</label>
+      <input type="number" step="0.1" id="tariffRate">
+    </div>
+    <div class="field">
+      <label for="feedInRate">Feed-in / export rate (&#8377;/kWh)</label>
+      <input type="number" step="0.1" id="feedInRate">
+    </div>
+    <div class="field">
+      <label for="batteryCapacity">Battery capacity (kWh)</label>
+      <input type="number" step="0.1" id="batteryCapacity">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="settingsCancel">Cancel</button>
+      <button class="btn btn-primary" id="settingsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("access_token");
+if (!token) window.location.href = "/login";
+
+async function authFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+    throw new Error("Not authenticated");
+  }
+  return res;
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  try { await authFetch("/api/auth/logout", { method: "POST" }); } catch (e) {}
+  localStorage.removeItem("access_token");
+  window.location.href = "/";
+});
+
+const fmt = (n, d = 2) => (n === null || n === undefined) ? "--" : Number(n).toFixed(d);
+
+function dot(color) {
+  return `<span class="swatch" style="background:${color}"></span>`;
+}
+
+function renderTiles(today, billing) {
+  const tiles = [
+    { label: "Generated Today", value: fmt(today.generated_kwh), unit: "kWh", color: "var(--series-generated)" },
+    { label: "Consumed Today", value: fmt(today.consumed_kwh), unit: "kWh", color: "var(--series-consumed)" },
+    { label: "Sent to Grid", value: fmt(today.grid_export_kwh), unit: "kWh", color: "var(--series-export)" },
+    { label: "Drawn from Grid", value: fmt(today.grid_import_kwh), unit: "kWh", color: "var(--series-import)" },
+    { label: "Inverter", value: today.inverter_status === "fault" ? "FAULT" : "OK", unit: "",
+      cls: today.inverter_status === "fault" ? "status-fault" : "status-ok" },
+    { label: "Est. Monthly Bill", value: fmt(billing.estimated_bill), unit: "₹" },
+    { label: "Est. Monthly Savings", value: fmt(billing.estimated_savings), unit: "₹" },
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(t => `
+    <div class="tile">
+      <div class="label">${t.color ? dot(t.color) : ""} ${t.label}</div>
+      <div class="value ${t.cls || ""}">${t.value} <span class="unit">${t.unit}</span></div>
+    </div>`).join("");
+}
+
+function renderBattery(pct) {
+  const p = Math.max(0, Math.min(100, pct ?? 0));
+  document.getElementById("batteryMeter").style.width = p + "%";
+  document.getElementById("batteryPctLabel").textContent = fmt(pct, 0) + "%";
+}
+
+function renderEnergyFlow(today) {
+  const generated = today.generated_kwh || 0;
+  const exported = today.grid_export_kwh || 0;
+  const selfUsed = Math.max(0, Math.min(generated, today.consumed_kwh || 0));
+  const toBattery = Math.max(0, generated - selfUsed - exported);
+  const total = selfUsed + exported + toBattery;
+
+  const segments = [
+    { label: "Used at home", value: selfUsed, color: "var(--series-generated)" },
+    { label: "Sent to grid", value: exported, color: "var(--series-export)" },
+    { label: "Charged to battery", value: toBattery, color: "var(--series-battery)" },
+  ];
+
+  const bar = document.getElementById("energyFlowBar");
+  const legend = document.getElementById("energyFlowLegend");
+
+  if (total <= 0) {
+    bar.innerHTML = "";
+    legend.innerHTML = '<div class="empty">No solar generation yet today.</div>';
+    return;
+  }
+
+  bar.innerHTML = segments
+    .filter(s => s.value > 0)
+    .map(s => `<div class="seg" style="width:${(s.value / total * 100).toFixed(1)}%;background:${s.color}"></div>`)
+    .join("");
+
+  legend.innerHTML = segments.map(s => `
+    <span class="key">${dot(s.color)} ${s.label}: ${fmt(s.value)} kWh</span>`).join("");
+}
+
+function renderAlerts(alerts) {
+  const el = document.getElementById("alerts");
+  if (!alerts.length) { el.innerHTML = '<div class="empty">No active alerts.</div>'; return; }
+  const icons = { info: "ℹ", warning: "⚠", critical: "⛔" };
+  el.innerHTML = alerts.map(a => `
+    <div class="alert ${a.level}">
+      <span><span class="icon">${icons[a.level] || ""}</span>${a.message}</span>
+      <span class="ts">${new Date(a.timestamp).toLocaleTimeString()}</span>
+    </div>`).join("");
+}
+
+let generatedChart, consumedChart;
+
+function makeGradient(ctx, hexColor) {
+  const g = ctx.createLinearGradient(0, 0, 0, 200);
+  g.addColorStop(0, hexColor + "55");
+  g.addColorStop(1, hexColor + "00");
+  return g;
+}
+
+function buildTrendChart(canvasId, hexColor, label) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  const style = getComputedStyle(document.documentElement);
+  const gridline = style.getPropertyValue("--gridline").trim();
+  const textSecondary = style.getPropertyValue("--text-secondary").trim();
+
+  return new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [{
+        label,
+        data: [],
+        borderColor: hexColor,
+        backgroundColor: makeGradient(ctx, hexColor),
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: hexColor,
+        pointHoverBorderColor: style.getPropertyValue("--surface-1").trim(),
+        pointHoverBorderWidth: 2,
+        tension: 0.45,
+        fill: true,
+        cubicInterpolationMode: "monotone",
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        y: { beginAtZero: true, grid: { color: gridline }, ticks: { color: textSecondary } },
+        x: { grid: { display: false }, ticks: { color: textSecondary, maxTicksLimit: 6 } },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+function renderChart(series) {
+  const style = getComputedStyle(document.documentElement);
+  const generatedColor = style.getPropertyValue("--series-generated").trim();
+  const consumedColor = style.getPropertyValue("--chart-consumed-line").trim();
+
+  const labels = series.map(r => new Date(r.timestamp).toLocaleTimeString());
+  const generated = series.map(r => r.generated_kwh);
+  const consumed = series.map(r => r.consumed_kwh);
+
+  if (!generatedChart) generatedChart = buildTrendChart("generatedChart", generatedColor, "Generated (kWh/tick)");
+  if (!consumedChart) consumedChart = buildTrendChart("consumedChart", consumedColor, "Consumed (kWh/tick)");
+
+  generatedChart.data.labels = labels;
+  generatedChart.data.datasets[0].data = generated;
+  generatedChart.update();
+
+  consumedChart.data.labels = labels;
+  consumedChart.data.datasets[0].data = consumed;
+  consumedChart.update();
+
+  document.getElementById("genLiveValue").textContent = fmt(generated[generated.length - 1], 4) + " kWh";
+  document.getElementById("conLiveValue").textContent = fmt(consumed[consumed.length - 1], 4) + " kWh";
+}
+
+let combinedChart;
+function renderCombinedChart(series) {
+  const style = getComputedStyle(document.documentElement);
+  const generatedColor = style.getPropertyValue("--series-generated").trim();
+  const consumedColor = style.getPropertyValue("--series-consumed").trim();
+  const gridline = style.getPropertyValue("--gridline").trim();
+  const textSecondary = style.getPropertyValue("--text-secondary").trim();
+
+  const labels = series.map(r => new Date(r.timestamp).toLocaleTimeString());
+  const generated = series.map(r => r.generated_kwh);
+  const consumed = series.map(r => r.consumed_kwh);
+
+  if (!combinedChart) {
+    const ctx = document.getElementById("trendChart").getContext("2d");
+    combinedChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          { label: "Generated (kWh/tick)", data: generated, borderColor: generatedColor, backgroundColor: generatedColor + "1a", borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true },
+          { label: "Consumed (kWh/tick)", data: consumed, borderColor: consumedColor, backgroundColor: consumedColor + "1a", borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridline }, ticks: { color: textSecondary } },
+          x: { grid: { display: false }, ticks: { color: textSecondary } },
+        },
+        plugins: { legend: { labels: { color: textSecondary } } },
+      },
+    });
+  } else {
+    combinedChart.data.labels = labels;
+    combinedChart.data.datasets[0].data = generated;
+    combinedChart.data.datasets[1].data = consumed;
+    combinedChart.update();
+  }
+}
+
+async function refresh() {
+  try {
+    const [today, billing, alerts, recent] = await Promise.all([
+      authFetch("/api/energy/today").then(r => r.json()),
+      authFetch("/api/billing/estimate").then(r => r.json()),
+      authFetch("/api/alerts").then(r => r.json()),
+      authFetch("/api/energy/recent?limit=40").then(r => r.json()),
+    ]);
+    renderTiles(today, billing);
+    renderBattery(today.battery_pct);
+    renderEnergyFlow(today);
+    renderAlerts(alerts);
+    renderChart(recent);
+    renderCombinedChart(recent);
+  } catch (e) {
+    console.error("refresh failed", e);
+  }
+}
+
+document.getElementById("clock").textContent = new Date().toLocaleString();
+setInterval(() => document.getElementById("clock").textContent = new Date().toLocaleString(), 1000);
+
+refresh();
+setInterval(refresh, 5000);
+
+authFetch("/api/auth/me").then(r => r.json()).then(me => {
+  document.getElementById("whoami").textContent = me.username + (me.is_admin ? " (admin)" : "");
+  if (me.is_admin) document.getElementById("adminLink").style.display = "";
+}).catch(() => {});
+
+/* ---------- settings modal ---------- */
+const modal = document.getElementById("settingsModal");
+const settingsError = document.getElementById("settingsError");
+
+document.getElementById("settingsBtn").addEventListener("click", async () => {
+  settingsError.classList.remove("show");
+  try {
+    const s = await authFetch("/api/settings").then(r => r.json());
+    document.getElementById("tariffRate").value = s.tariff_rate;
+    document.getElementById("feedInRate").value = s.feed_in_rate;
+    document.getElementById("batteryCapacity").value = s.battery_capacity_kwh;
+    modal.classList.add("show");
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+document.getElementById("settingsCancel").addEventListener("click", () => modal.classList.remove("show"));
+
+document.getElementById("settingsSave").addEventListener("click", async () => {
+  settingsError.classList.remove("show");
+  const payload = {
+    tariff_rate: parseFloat(document.getElementById("tariffRate").value),
+    feed_in_rate: parseFloat(document.getElementById("feedInRate").value),
+    battery_capacity_kwh: parseFloat(document.getElementById("batteryCapacity").value),
+  };
+  try {
+    const res = await authFetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Could not save settings");
+    modal.classList.remove("show");
+    refresh();
+  } catch (e) {
+    settingsError.textContent = e.message;
+    settingsError.classList.add("show");
+  }
+});
+</script>
+</body>
+</html>

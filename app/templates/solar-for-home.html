@@ -1,0 +1,36 @@
+{% extends "public_base.html" %}
+
+{% block title %}Solar For Home — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+  <h1>Solar For Home</h1>
+  <div class="breadcrumb"><a href="/">Home</a> <span class="sep">&#8250;</span> <span>Solar For Home</span></div>
+</section>
+
+<section class="page-body">
+  <div class="page-gallery">
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Solar_panels_on_a_roof.jpg?width=700" alt="Solar panels on a home roof" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Eight_rooftop_solar_panels%2C_T%C5%B7_Du_House%2C_Rogerstone_-_geograph.org.uk_-_5759878.jpg?width=700" alt="Rooftop solar panels on a residential house" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+  </div>
+
+  <h2>Built around a single rooftop system</h2>
+  <p>Whether you've got a small residential inverter or a hybrid system with battery storage, the dashboard tracks the same core numbers homeowners care about: how much you generated today, how much you used, how much you sent back to the grid, and what that's likely to cost — or save — you this month.</p>
+
+  <h2>What you get</h2>
+  <p>A live view of generation and consumption, a battery charge meter, an estimated monthly bill based on your own tariff and feed-in rate, and alerts if the inverter faults or output drops unexpectedly.</p>
+
+  <h2>Getting started</h2>
+  <p>Sign up, log in, and the dashboard starts populating immediately with simulated readings so you can see how it works. Swap in your real inverter's data whenever you're ready.</p>
+
+  <div class="cta-row" style="justify-content:flex-start; margin-top:8px;">
+    <a href="/signup" class="btn btn-primary">Get Started Free</a>
+  </div>
+</section>
+{% endblock %}

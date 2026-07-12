@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Log in — {{ app_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>&#9728; {{ app_name }}</h1>
+    <div class="sub">Log in to view your solar dashboard</div>
+
+    <div class="form-error" id="error"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="otpCode">2FA Code (only if enabled)</label>
+        <input type="text" id="otpCode" maxlength="6" placeholder="6-digit code">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%">Log in</button>
+    </form>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="/signup">Sign up</a>
+    </div>
+  </div>
+</div>
+
+<script>
+localStorage.removeItem("access_token");
+
+const form = document.getElementById("loginForm");
+const errorBox = document.getElementById("error");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove("show");
+
+  const body = new URLSearchParams();
+  body.set("username", document.getElementById("username").value);
+  body.set("password", document.getElementById("password").value);
+  if (document.getElementById("otpCode").value) {
+    body.set("otp_code", document.getElementById("otpCode").value);
+  }
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Login failed");
+    }
+    const data = await res.json();
+    localStorage.setItem("access_token", data.access_token);
+    window.location.href = "/dashboard";
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.classList.add("show");
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{% extends "public_base.html" %}
+
+{% block title %}Investors — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+  <h1>Investors</h1>
+  <div class="breadcrumb"><a href="/">Home</a> <span class="sep">&#8250;</span> <span>Investors</span></div>
+</section>
+
+<section class="page-body">
+  <div class="disclaimer-note">This is a personal / demo project. It is not a registered company, and it is not currently raising investment. This page is a placeholder for that section of the site.</div>
+
+  <div class="page-gallery">
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/527_N_Gramercy_Solar_panels_on_roof.jpg?width=700" alt="Residential solar installation" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+    <figure>
+      <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Solar_panels_on_a_roof.jpg?width=700" alt="Solar panels on a roof" loading="lazy">
+      <figcaption>Photo: Wikimedia Commons</figcaption>
+    </figure>
+  </div>
+
+  <h2>Current status</h2>
+  <p>{{ app_name }} is an independent project, built and maintained outside of any formal business structure. There is no funding round, cap table, or investor relations program associated with it today.</p>
+
+  <h2>Interested anyway?</h2>
+  <p>If you're interested in the technical approach, want to collaborate, or have feedback, reach out via <a href="/contact" style="color:var(--series-consumed); text-decoration:underline;">Let's Connect</a>.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+
+<!--
+  Google Analytics (GA4) — replace G-XXXXXXXXXX below with your own Measurement ID
+  from https://analytics.google.com before deploying publicly. Remove this block
+  entirely if you don't want third-party visitor analytics.
+-->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+</head>
+<body>
+
+<nav class="public-nav">
+  <a href="/" class="brand"><span>&#9728;</span> <span id="brandName">{{ app_name }}</span></a>
+  <div class="links">
+    <a href="/company">Company</a>
+    <a href="/solar-for-home">Solar For Home</a>
+    <a href="/solar-for-business">Solar For Business</a>
+    <a href="/#rates">Rates</a>
+    <a href="/portfolio">Portfolio</a>
+    <a href="/investors">Investors</a>
+  </div>
+  <div class="actions" id="navActions">
+    <a href="/login" class="btn">Log in</a>
+    <a href="/contact" class="btn btn-primary">Let's Connect</a>
+  </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<section class="cta-banner">
+  <div class="illustration-wrap">
+    <svg viewBox="0 0 100 100" width="150" height="150">
+      <circle cx="78" cy="18" r="10" class="ill-sun"/>
+      <polygon points="50,24 86,54 14,54" class="ill-roof"/>
+      <rect x="24" y="54" width="52" height="34" class="ill-wall"/>
+      <rect x="42" y="70" width="16" height="18" class="ill-door"/>
+      <rect x="27" y="41" width="16" height="11" class="ill-panel"/>
+      <rect x="45" y="37" width="16" height="11" class="ill-panel"/>
+      <rect x="63" y="41" width="16" height="11" class="ill-panel"/>
+    </svg>
+  </div>
+  <div class="content">
+    <h2>Ready to see your own solar data?</h2>
+    <p>Set up your dashboard in a couple of minutes and start tracking generation, savings, and battery health today.</p>
+    <a href="/signup" class="btn btn-primary btn-lg" id="ctaBannerBtn">Get Started Free</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-grid">
+    <div>
+      <h4><span class="fdot" style="background:var(--series-generated)"></span><span id="brandNameFooter">{{ app_name }}</span></h4>
+      <p>A simple, self-hosted dashboard for your home solar system.</p>
+    </div>
+    <div>
+      <h4><span class="fdot" style="background:var(--series-consumed)"></span>Company</h4>
+      <a href="/company">About</a>
+      <a href="/portfolio">Portfolio</a>
+      <a href="/investors">Investors</a>
+      <a href="/contact">Let's Connect</a>
+    </div>
+    <div>
+      <h4><span class="fdot" style="background:var(--series-export)"></span>Solutions</h4>
+      <a href="/solar-for-home">Solar For Home</a>
+      <a href="/solar-for-business">Solar For Business</a>
+    </div>
+    <div>
+      <h4><span class="fdot" style="background:var(--series-import)"></span>Account</h4>
+      <a href="/login">Log in</a>
+      <a href="/signup">Sign up</a>
+      <a href="/dashboard">Dashboard</a>
+    </div>
+  </div>
+  <div class="footer-bottom">This is a personal / demo project. Company, portfolio, and investor content on this site is illustrative placeholder text, not a registered business.</div>
+</footer>
+
+<script>
+fetch("/api/public/info").then(r => r.json()).then(info => {
+  if (info.company_name) {
+    document.getElementById("brandName").textContent = info.company_name;
+    document.getElementById("brandNameFooter").textContent = info.company_name;
+  }
+  window.__publicInfo = info;
+  document.dispatchEvent(new CustomEvent("public-info-loaded", { detail: info }));
+}).catch(() => {});
+
+if (localStorage.getItem("access_token")) {
+  document.getElementById("navActions").innerHTML =
+    '<a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>';
+  const ctaBtn = document.getElementById("ctaBannerBtn");
+  if (ctaBtn) {
+    ctaBtn.href = "/dashboard";
+    ctaBtn.textContent = "Go to Dashboard";
+  }
+}
+</script>
+{% block scripts_extra %}{% endblock %}
+</body>
+</html>
